@@ -145,6 +145,7 @@ function App() {
         <Route path="/error" element={<ErrorPage />} />
         <Route path="/" element={isAuthenticated ? <Home /> : <Login />} />
         <Route path="*" element={<NotFound />} />
+      </Routes>
       
       <ToastContainer
         position="bottom-right"
@@ -159,7 +160,6 @@ function App() {
         theme={darkMode ? 'dark' : 'light'}
         toastClassName="rounded-lg text-sm font-medium"
       />
-      </Routes>
       </div>
     </AuthContext.Provider>
     
