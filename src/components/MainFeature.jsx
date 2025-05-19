@@ -83,7 +83,7 @@ const MainFeature = ({ onTasksChange }) => {
     if (onTasksChange) {
       onTasksChange(tasks);
     }
-  }, [tasks, onTasksChange]);
+  }, [tasks]);
 
   // Reset form
   const resetForm = () => {
