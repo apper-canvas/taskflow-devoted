@@ -222,9 +222,10 @@ const MainFeature = ({ onTasksChange }) => {
       } catch (error) {
         console.error("Error updating task status:", error);
         toast.error("Failed to update task status");
-      setIsUpdatingStatus(false);
+      } finally {
+        setIsUpdatingStatus(false);
+      }
     })();
-    toast.info(`Task moved to ${newStatus.replace('-', ' ')}`);
   };
 
   // Handle drag start
@@ -567,10 +568,10 @@ const MainFeature = ({ onTasksChange }) => {
                     type="submit"
                     className="btn btn-primary flex items-center gap-2"
                     disabled={isSubmitting}
+                  >
                     {isSubmitting && (
                       <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2"></div>
                     )}
-                  >
                     {editingTaskId ? 'Update Task' : 'Create Task'}
                   </button>
                 </div>
