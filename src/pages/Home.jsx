@@ -6,9 +6,11 @@ import { AuthContext } from '../App';
 import MainFeature from '../components/MainFeature';
 import { getIcon } from '../utils/iconUtils';
 import { fetchTasks } from '../services/taskService';
+import ProjectModal from '../components/ProjectModal';
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const { isAuthenticated, logout } = useContext(AuthContext);
   const [stats, setStats] = useState({
     total: 0,
@@ -72,6 +74,8 @@ const Home = () => {
   const CheckCircleIcon = getIcon('check-circle');
   const ClockIcon = getIcon('clock');
   const AlertCircleIcon = getIcon('alert-circle');
+  const FolderPlusIcon = getIcon('folder-plus');
+  const RefreshCwIcon = getIcon('refresh-cw');
   const ListIcon = getIcon('list');
   const LogOutIcon = getIcon('log-out');
 
@@ -95,6 +99,15 @@ const Home = () => {
             {!isLoading && (
               <div className="flex flex-wrap items-center gap-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                  <button
+                    onClick={() => setIsProjectModalOpen(true)}
+                    className="btn btn-outline flex items-center gap-2 text-sm"
+                    aria-label="Create Project"
+                  >
+                    <FolderPlusIcon className="w-4 h-4" />
+                    New Project
+                  </button>
+                  
                   <button
                     onClick={logout}
                     className="btn btn-outline flex items-center gap-2 text-sm"
@@ -142,10 +155,20 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <MainFeature onTasksChange={updateStats} />
+            <MainFeature 
+              onTasksChange={updateStats} 
+              refreshProjectsFlag={isProjectModalOpen} 
+            />
           </motion.div>
         )}
       </main>
+      
+      {/* Project Modal */}
+      <ProjectModal 
+        isOpen={isProjectModalOpen} 
+        onClose={() => setIsProjectModalOpen(false)}
+        onProjectCreated={() => toast.success("Project created! You can now assign tasks to this project.")}
+      />
       
       <footer className="mt-auto py-6 text-center text-sm text-surface-500 dark:text-surface-400 border-t border-surface-200 dark:border-surface-800">
         <div className="container mx-auto px-4">

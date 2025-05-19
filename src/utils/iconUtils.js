@@ -1,6 +1,7 @@
 import {
   AlertCircle,
-  CheckCircle,
+  Tag, Folder, FolderPlus, RefreshCw,
+  Flag, List, CheckSquare, X, Edit, 
   CheckSquare,
   Clock,
   Edit,
@@ -16,6 +17,8 @@ import {
   Tag,
   Trash2,
   X,
+  'folder-plus': FolderPlus,
+  'refresh-cw': RefreshCw,
   Calendar,
   ArrowUpDown,
   LogOut

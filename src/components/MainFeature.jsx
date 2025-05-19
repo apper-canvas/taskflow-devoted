@@ -7,7 +7,7 @@ import { fetchTasks, createTask, updateTask, deleteTask, updateTaskStatus } from
 import { fetchProjects } from '../services/projectService';
 import { fetchTags, createTag } from '../services/tagService';
 
-const MainFeature = ({ onTasksChange }) => {
+const MainFeature = ({ onTasksChange, refreshProjectsFlag }) => {
   // State for tasks, projects, and tags
   const [tasks, setTasks] = useState([]);
   const [availableProjects, setAvailableProjects] = useState([]);
@@ -62,6 +62,19 @@ const MainFeature = ({ onTasksChange }) => {
     loadData();
   }, []);
 
+  // Refresh projects when a new project is created
+  useEffect(() => {
+    const refreshProjects = async () => {
+      try {
+        const projectsData = await fetchProjects();
+        setAvailableProjects(projectsData);
+      } catch (error) {
+        console.error("Error refreshing projects:", error);
+      }
+    };
+    refreshProjects();
+  }, [refreshProjectsFlag]);
+  
   const [selectedTask, setSelectedTask] = useState(null);
   const [newTagInput, setNewTagInput] = useState('');
   const [board, setBoard] = useState({
@@ -367,6 +380,30 @@ const MainFeature = ({ onTasksChange }) => {
   return (
     <div className="space-y-8">
       {/* Header and Controls */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {availableProjects.length > 0 && (
+          <div className="card p-3 flex flex-col">
+            <p className="text-sm font-medium mb-2">Available Projects</p>
+            <div className="flex flex-wrap gap-2 max-w-full overflow-x-auto">
+              {availableProjects.map(project => (
+                <div 
+                  key={project.id}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full text-sm"
+                  style={{ 
+                    backgroundColor: `${project.color}20`, 
+                    color: project.color,
+                    border: `1px solid ${project.color}50`
+                  }}
+                >
+                  <FolderIcon className="w-3 h-3" />
+                  <span className="truncate max-w-[120px]">{project.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
       <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
         <div>
           <h2 className="text-2xl font-bold">Task Management Board</h2>
@@ -501,7 +538,7 @@ const MainFeature = ({ onTasksChange }) => {
                     >
                       <option value="">None</option>
                       {availableProjects.map(project => (
-                        <option key={project.id} value={project.id}>
+                        <option key={project.id} value={project.id} style={{ color: project.color }}>
                           {project.name}
                         </option>
                       ))}
