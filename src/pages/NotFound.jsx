@@ -1,79 +1,27 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { getIcon } from '../utils/iconUtils';
 
 const NotFound = () => {
-  const AlertTriangleIcon = getIcon('alert-triangle');
-  const HomeIcon = getIcon('home');
-  
+  const AlertIcon = getIcon('alert-circle');
+  const ArrowLeftIcon = getIcon('arrow-up-down');
+
   return (
-    <motion.div 
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div 
-        className="text-accent mb-6"
-        initial={{ scale: 0.5 }}
-        animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
-        transition={{ delay: 0.2, duration: 0.8 }}
-      >
-        <AlertTriangleIcon size={80} />
-      </motion.div>
-      
-      <motion.h1 
-        className="text-4xl md:text-5xl font-bold mb-2 text-center"
-        initial={{ y: -20 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        404 - Page Not Found
-      </motion.h1>
-      
-      <motion.p 
-        className="text-lg md:text-xl text-surface-600 dark:text-surface-400 mb-8 text-center max-w-lg"
-        initial={{ y: -20 }}
-        animate={{ y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-      >
-        The page you're looking for doesn't exist or has been moved.
-      </motion.p>
-      
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-      >
-        <Link 
-          to="/" 
-          className="btn btn-primary flex items-center gap-2 neu-light"
-        >
-          <HomeIcon size={20} />
-          <span>Back to Home</span>
+    <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-900 p-4">
+      <div className="text-center max-w-md">
+        <div className="w-24 h-24 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
+          <AlertIcon className="w-12 h-12 text-red-500" />
+        </div>
+        
+        <h1 className="text-4xl font-bold mb-4 text-surface-800 dark:text-surface-100">404</h1>
+        <h2 className="text-2xl font-semibold mb-4 text-surface-700 dark:text-surface-200">Page Not Found</h2>
+        <p className="mb-8 text-surface-600 dark:text-surface-400">The page you are looking for doesn't exist or has been moved.</p>
+        
+        <Link to="/" className="btn btn-primary inline-flex items-center">
+          <ArrowLeftIcon className="w-5 h-5 mr-2" /> Return to Home
         </Link>
-      </motion.div>
-      
-      <motion.div 
-        className="mt-12 w-full max-w-md p-6 card"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8, duration: 0.8 }}
-      >
-        <h3 className="text-lg font-medium mb-4">Looking for something?</h3>
-        <p className="text-surface-600 dark:text-surface-400 mb-4">
-          You might find these links helpful:
-        </p>
-        <ul className="space-y-2">
-          <li>
-            <Link to="/" className="text-primary hover:underline flex items-center gap-2">
-              <HomeIcon size={16} />
-              <span>Home Page</span>
-            </Link>
-          </li>
-        </ul>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

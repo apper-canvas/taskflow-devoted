@@ -1,25 +1,53 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { useContext } from 'react';
+import { AuthContext } from '../App';
 import MainFeature from '../components/MainFeature';
 import { getIcon } from '../utils/iconUtils';
+import { fetchTasks } from '../services/taskService';
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, logout } = useContext(AuthContext);
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
     pending: 0,
     overdue: 0
   });
-
-  // Simulate data loading
+  
+  // Load data when component mounts
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+    const loadTasks = async () => {
+      try {
+        setIsLoading(true);
+        const tasks = await fetchTasks();
+        
+        // Calculate stats from fetched tasks
+        const completed = tasks.filter(task => task.status === 'done').length;
+        const total = tasks.length;
+        const pending = tasks.filter(task => task.status === 'to-do').length;
+        const overdue = tasks.filter(task => {
+          if (!task.dueDate) return false;
+          const dueDate = new Date(task.dueDate);
+          return dueDate < new Date() && task.status !== 'done';
+        }).length;
+        
+        setStats({ total, completed, pending, overdue });
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        toast.error('Failed to load task statistics');
+        setIsLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    if (isAuthenticated) {
+      loadTasks();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const updateStats = (newTasks) => {
@@ -45,6 +73,7 @@ const Home = () => {
   const ClockIcon = getIcon('clock');
   const AlertCircleIcon = getIcon('alert-circle');
   const ListIcon = getIcon('list');
+  const LogOutIcon = getIcon('log-out');
 
   return (
     <div className="min-h-screen">
@@ -64,7 +93,17 @@ const Home = () => {
             </div>
             
             {!isLoading && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                  <button
+                    onClick={logout}
+                    className="btn btn-outline flex items-center gap-2 text-sm"
+                    aria-label="Logout"
+                  >
+                    <LogOutIcon className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
                 {[
                   { icon: ListIcon, label: 'Total', value: stats.total, color: 'bg-primary/10 text-primary' },
                   { icon: CheckCircleIcon, label: 'Completed', value: stats.completed, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },

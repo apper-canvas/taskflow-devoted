@@ -3,42 +3,65 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { getIcon } from '../utils/iconUtils';
+import { fetchTasks, createTask, updateTask, deleteTask, updateTaskStatus } from '../services/taskService';
+import { fetchProjects } from '../services/projectService';
+import { fetchTags, createTag } from '../services/tagService';
 
 const MainFeature = ({ onTasksChange }) => {
-  // State for tasks list and current task
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
+  // State for tasks, projects, and tags
+  const [tasks, setTasks] = useState([]);
+  const [availableProjects, setAvailableProjects] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+  // Task form state
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     priority: 'medium',
     status: 'to-do',
     dueDate: '',
-    projectId: '',
+    projectId: null,
     tags: []
   });
 
+  // Filters and UI state
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
-  const [availableTags, setAvailableTags] = useState([
-    { id: '1', name: 'Work', color: '#3b82f6' },
-    { id: '2', name: 'Personal', color: '#8b5cf6' },
-    { id: '3', name: 'Important', color: '#ef4444' },
-    { id: '4', name: 'Learning', color: '#10b981' }
-  ]);
-  const [availableProjects, setAvailableProjects] = useState([
-    { id: '1', name: 'General', description: 'Default project', color: '#3b82f6' },
-    { id: '2', name: 'Website Redesign', description: 'Redesign company website', color: '#8b5cf6' },
-    { id: '3', name: 'Mobile App', description: 'New mobile application', color: '#10b981' }
-  ]);
-  
   const [showForm, setShowForm] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Load data from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [tasksData, projectsData, tagsData] = await Promise.all([
+          fetchTasks(),
+          fetchProjects(),
+          fetchTags()
+        ]);
+        setTasks(tasksData);
+        setAvailableProjects(projectsData);
+        setAvailableTags(tagsData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Failed to load data. Please refresh the page.");
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+
   const [selectedTask, setSelectedTask] = useState(null);
   const [newTagInput, setNewTagInput] = useState('');
   const [board, setBoard] = useState({
@@ -66,21 +89,15 @@ const MainFeature = ({ onTasksChange }) => {
   const ArrowUpDown = getIcon('arrow-up-down');
 
   // Initialize board when tasks change
-  useEffect(() => {
-    // Save to local storage
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-    
+  useEffect(() => {    
     // Organize tasks into board columns
     const newBoard = {
       'to-do': tasks.filter(task => task.status === 'to-do'),
       'in-progress': tasks.filter(task => task.status === 'in-progress'),
       'done': tasks.filter(task => task.status === 'done')
     };
-    
     setBoard(newBoard);
-    
-    // Notify parent component of tasks change
-    if (onTasksChange) {
+    if (onTasksChange && !isLoading) {
       onTasksChange(tasks);
     }
   }, [tasks]);
@@ -89,7 +106,7 @@ const MainFeature = ({ onTasksChange }) => {
   const resetForm = () => {
     setNewTask({
       title: '',
-      description: '',
+      status: 'to-do', 
       priority: 'medium',
       status: 'to-do',
       dueDate: '',
@@ -101,72 +118,112 @@ const MainFeature = ({ onTasksChange }) => {
 
   // Create or update task
   const handleSubmitTask = (e) => {
-    e.preventDefault();
-    
-    if (!newTask.title.trim()) {
-      toast.error("Task title is required");
-      return;
-    }
-    
-    if (editingTaskId) {
-      // Update existing task
-      const updatedTasks = tasks.map(task => 
-        task.id === editingTaskId ? { ...task, ...newTask } : task
-      );
-      setTasks(updatedTasks);
-      toast.success("Task updated successfully");
-    } else {
-      // Create new task
-      const task = {
-        ...newTask,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setTasks([...tasks, task]);
-      toast.success("Task created successfully");
-    }
-    
-    resetForm();
-    setShowForm(false);
+    e.preventDefault(); 
+    setIsSubmitting(true);
+
+    (async () => {
+      try {
+        if (!newTask.title.trim()) {
+          toast.error("Task title is required");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (editingTaskId) {
+          // Update existing task
+          await updateTask(editingTaskId, newTask);
+          
+          // Refresh tasks list
+          const updatedTasks = await fetchTasks();
+          setTasks(updatedTasks);
+          
+          toast.success("Task updated successfully");
+        } else {
+          // Create new task
+          await createTask(newTask);
+          
+          // Refresh tasks list
+          const updatedTasks = await fetchTasks();
+          setTasks(updatedTasks);
+          
+          toast.success("Task created successfully");
+        }
+
+        resetForm();
+        setShowForm(false);
+      } catch (error) {
+        console.error("Error saving task:", error);
+        toast.error("Failed to save task. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    })();
   };
 
   // Edit task
   const handleEditTask = (id) => {
-    const taskToEdit = tasks.find(task => task.id === id);
-    if (taskToEdit) {
-      setNewTask({ ...taskToEdit });
-      setEditingTaskId(id);
-      setShowForm(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    setIsLoading(true);
+    (async () => {
+      try {
+        const taskToEdit = tasks.find(task => task.id === id);
+        if (taskToEdit) {
+          setNewTask({ ...taskToEdit });
+          setEditingTaskId(id);
+          setShowForm(true);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch (error) {
+        console.error("Error preparing task for edit:", error);
+        toast.error("Failed to prepare task for editing");
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   };
 
   // Delete task
   const handleDeleteTask = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
-    toast.success("Task deleted successfully");
-    if (selectedTask?.id === id) {
-      setSelectedTask(null);
-      setIsModalOpen(false);
-    }
+    setIsDeleting(true);
+    (async () => {
+      try {
+        await deleteTask(id);
+        
+        // Refresh tasks list
+        const updatedTasks = await fetchTasks();
+        setTasks(updatedTasks);
+        
+        toast.success("Task deleted successfully");
+        
+        if (selectedTask?.id === id) {
+          setSelectedTask(null);
+          setIsModalOpen(false);
+        }
+      } catch (error) {
+        console.error("Error deleting task:", error);
+        toast.error("Failed to delete task. Please try again.");
+      } finally {
+        setIsDeleting(false);
+      }
+    })();
   };
 
   // Change task status
   const handleStatusChange = (taskId, newStatus) => {
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        return { 
-          ...task, 
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-          completedAt: newStatus === 'done' ? new Date().toISOString() : null
-        };
-      }
-      return task;
-    });
-    
-    setTasks(updatedTasks);
+    setIsUpdatingStatus(true);
+    (async () => {
+      try {
+        await updateTaskStatus(taskId, newStatus);
+        
+        // Refresh tasks list
+        const updatedTasks = await fetchTasks();
+        setTasks(updatedTasks);
+        
+        toast.info(`Task moved to ${newStatus.replace('-', ' ')}`);
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        toast.error("Failed to update task status");
+      setIsUpdatingStatus(false);
+    })();
     toast.info(`Task moved to ${newStatus.replace('-', ' ')}`);
   };
 
@@ -220,23 +277,35 @@ const MainFeature = ({ onTasksChange }) => {
   // Add a new tag
   const handleAddNewTag = () => {
     if (newTagInput.trim()) {
-      const randomColor = `#${Math.floor(Math.random()*16777215).toString(16)}`;
-      const newTag = {
-        id: crypto.randomUUID(),
-        name: newTagInput.trim(),
-        color: randomColor
-      };
-      
-      setAvailableTags([...availableTags, newTag]);
-      setNewTagInput('');
-      
-      // Add to current task if editing/creating
-      if (showForm) {
-        setNewTask({
-          ...newTask,
-          tags: [...newTask.tags, newTag.id]
-        });
-      }
+      setIsSubmitting(true);
+      (async () => {
+        try {
+          const randomColor = `#${Math.floor(Math.random()*16777215).toString(16)}`;
+          const tagData = {
+            name: newTagInput.trim(),
+            color: randomColor
+          };
+          
+          const newTag = await createTag(tagData);
+          
+          // Update available tags
+          setAvailableTags([...availableTags, newTag]);
+          setNewTagInput('');
+          
+          // Add to current task if editing/creating
+          if (showForm) {
+            setNewTask({
+              ...newTask,
+              tags: [...newTask.tags, newTag.id]
+            });
+          }
+          toast.success("Tag created successfully");
+        } catch (error) {
+          toast.error("Failed to create tag. Please try again.");
+        } finally {
+          setIsSubmitting(false);
+        }
+      })();
     }
   };
 
@@ -322,6 +391,7 @@ const MainFeature = ({ onTasksChange }) => {
           <motion.button
             whileTap={{ scale: 0.95 }}
             className="btn btn-primary flex items-center gap-2"
+            disabled={isLoading}
             onClick={() => {
               resetForm();
               setShowForm(!showForm);
@@ -344,8 +414,8 @@ const MainFeature = ({ onTasksChange }) => {
       
       {/* Task Form */}
       <AnimatePresence>
-        {showForm && (
-          <motion.div
+        {showForm && !isLoading && (
+         <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -495,7 +565,11 @@ const MainFeature = ({ onTasksChange }) => {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="btn btn-primary flex items-center gap-2"
+                    disabled={isSubmitting}
+                    {isSubmitting && (
+                      <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2"></div>
+                    )}
                   >
                     {editingTaskId ? 'Update Task' : 'Create Task'}
                   </button>
@@ -540,6 +614,11 @@ const MainFeature = ({ onTasksChange }) => {
       {/* Kanban Board */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {kanbanColumns.map(column => (
+          isLoading ? (
+            <div className="card p-4 min-h-[300px] flex items-center justify-center">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : (
           <div 
             key={column.id}
             className={`card p-4 border-t-4 ${column.color}`}
@@ -591,7 +670,7 @@ const MainFeature = ({ onTasksChange }) => {
                       className="task-card"
                       draggable
                       onDragStart={(e) => handleDragStart(e, task.id)}
-                      onClick={() => openTaskDetails(task)}
+                      onClick={() => !isUpdatingStatus && openTaskDetails(task)}
                       whileHover={{ y: -2 }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -613,7 +692,8 @@ const MainFeature = ({ onTasksChange }) => {
                       <div className="flex flex-wrap gap-1 mb-2">
                         {task.tags.map(tagId => {
                           const tag = getTagById(tagId);
-                          if (!tag) return null;
+                          if (!tag) return null; 
+                          
                           return (
                             <span
                               key={tagId}
@@ -650,6 +730,7 @@ const MainFeature = ({ onTasksChange }) => {
               )}
             </div>
           </div>
+          )
         ))}
       </div>
       
@@ -778,11 +859,15 @@ const MainFeature = ({ onTasksChange }) => {
                     disabled={selectedTask.status === column.id}
                   >
                     <column.icon className="w-4 h-4 mr-1" />
+                    {isUpdatingStatus && selectedTask.status !== column.id && (
+                      <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin mr-1"></div>
+                    )}
                     {column.title}
                   </button>
                 ))}
               </div>
             </div>
+
             
             <div className="flex items-center justify-between border-t dark:border-surface-700 pt-4">
               <div className="text-xs text-surface-500 dark:text-surface-400">
@@ -796,6 +881,7 @@ const MainFeature = ({ onTasksChange }) => {
                 <button
                   className="btn btn-outline text-sm flex items-center gap-1"
                   onClick={() => {
+                    if (isLoading || isSubmitting) return;
                     closeTaskDetails();
                     handleEditTask(selectedTask.id);
                   }}
@@ -805,11 +891,14 @@ const MainFeature = ({ onTasksChange }) => {
                 </button>
                 <button
                   className="btn text-sm bg-red-500 hover:bg-red-600 text-white flex items-center gap-1"
+                  disabled={isDeleting}
                   onClick={() => {
                     closeTaskDetails();
                     handleDeleteTask(selectedTask.id);
                   }}
                 >
+                  {isDeleting && (
+                    <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin mr-1"></div>)}
                   <TrashIcon className="w-4 h-4" />
                   Delete
                 </button>
@@ -820,13 +909,13 @@ const MainFeature = ({ onTasksChange }) => {
       )}
       
       {/* Empty State */}
-      {filteredTasks.length === 0 && (
+      {!isLoading && filteredTasks.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-20 h-20 mb-4 bg-surface-100 dark:bg-surface-800 rounded-full flex items-center justify-center">
             <ListTodoIcon className="w-10 h-10 text-surface-400" />
           </div>
           <h3 className="text-xl font-bold mb-2">No tasks found</h3>
-          <p className="text-surface-600 dark:text-surface-400 max-w-md mb-6">
+          <p className="text-surface-600 dark:text-surface-400 max-w-md mb-6"> 
             {searchQuery 
               ? `No tasks matching "${searchQuery}" with the current filters.` 
               : "You don't have any tasks that match the current filters."}
