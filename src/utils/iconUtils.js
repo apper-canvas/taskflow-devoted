@@ -1,27 +1,26 @@
 import {
   AlertCircle,
-  Tag, Folder, FolderPlus, RefreshCw,
-  Flag, List, CheckSquare, X, Edit, 
+  ArrowUpDown,
+  Calendar,
+  CheckCircle,
   CheckSquare,
   Clock,
   Edit,
   Flag,
   Folder,
+  FolderPlus,
   List,
   ListTodo,
+  LogOut,
   Moon,
   Plus,
   PlusCircle,
+  RefreshCw,
   Search,
   Sun,
   Tag,
   Trash2,
-  X,
-  'folder-plus': FolderPlus,
-  'refresh-cw': RefreshCw,
-  Calendar,
-  ArrowUpDown,
-  LogOut
+  X
 } from 'lucide-react';
 
 /**
@@ -49,7 +48,9 @@ export const getIcon = (iconName) => {
     'trash-2': Trash2,
     'x': X,
     'calendar': Calendar,
-    'arrow-up-down': ArrowUpDown, 
+    'arrow-up-down': ArrowUpDown,
+    'folder-plus': FolderPlus,
+    'refresh-cw': RefreshCw,
     'log-out': LogOut
   };
   
